@@ -12,6 +12,9 @@ import random
 # 流量银行主页地址 需要先请求该地址以更新cookies
 URL_INDEX = 'http://wap.hn.10086.cn/wap/weixin/netBank/index.jsp'
 
+# 抢流量页面地址 通过该页面可以判断当前是否已整点开放抢流量
+URL_GAIN_NET = 'http://wap.hn.10086.cn/wap/weixin/netBank/gainNet.jsp'
+
 # 抢流量操作的地址
 URL_DO = 'http://wap.hn.10086.cn/wap/weixin/netBank/netBank.do'
 
@@ -56,6 +59,22 @@ def index():
     return True
 
 
+def gainNet():
+    ''' 访问抢流量页面 '''
+    resp = opener.open(URL_GAIN_NET)
+    content = resp.read().decode('utf-8')
+    if -1 == content.find(u'拼手气，抢红包'):
+        # 当前不可抢流量
+        pos = content.find('<div class="grey_btn marginL_10 marginR_10">')
+        if -1 != pos:
+            start = pos + len('<div class="grey_btn marginL_10 marginR_10">')
+            end = content.find('</div>', start)
+            if -1 != end:
+                print content[start:end]
+        return False
+    return True
+
+
 def do():
     ''' 抢流量 '''
     resp = opener.open(URL_DO, DATA_DO)
@@ -64,6 +83,7 @@ def do():
         now = datetime.now()
         filename = 'do ' + now.strftime('%Y-%m-%d %H_%M_%S') + '.html'
         save_content_to_file(content, filename)
+        return False
 
     # 抢流量失败时的提示
     pos = content.find('<div class="e_redBtn">')
@@ -80,10 +100,22 @@ def do():
         end = content.find('</span>', start)
         if -1 != end:
             print u'当前流量余额：' + content[start:end]
+    return True
 
+
+def netBank():
+    ''' 上面几个函数的组合调用 '''
+    if not index():
+        print u'访问主页时发生了错误，可能相关参数已失效'
+        return
+    if not gainNet():
+        return
+    random_secs = random.randint(1, 3)
+    time.sleep(random_secs)
+    if not do():
+        print u'访问主页时发生了错误，可能相关参数已失效'
+    else:
+        print u'本次操作完成'
 
 if __name__ == '__main__':
-    index()
-    random_secs = random.randint(1, 5)
-    time.sleep(random_secs)
-    do()
+    netBank()
