@@ -5,9 +5,9 @@
 
 import urllib2
 import urllib
-from datetime import datetime
 import time
 import random
+from datetime import datetime
 
 # 流量银行主页地址 需要先请求该地址以更新cookies
 URL_INDEX = 'http://wap.hn.10086.cn/wap/weixin/netBank/index.jsp'
@@ -55,8 +55,8 @@ def index():
         now = datetime.now()
         filename = 'index ' + now.strftime('%Y-%m-%d %H_%M_%S') + '.html'
         save_content_to_file(content, filename)
-        return False
-    return True
+        return (False, u'访问主页时发生了错误，可能原因为相关参数已失效')
+    return (True, u'成功访问了主页')
 
 
 def gainNet():
@@ -65,14 +65,15 @@ def gainNet():
     content = resp.read().decode('utf-8')
     if -1 == content.find(u'拼手气，抢红包'):
         # 当前不可抢流量
+        msg = u'当前不可抢流量'
         pos = content.find('<div class="grey_btn marginL_10 marginR_10">')
         if -1 != pos:
             start = pos + len('<div class="grey_btn marginL_10 marginR_10">')
             end = content.find('</div>', start)
             if -1 != end:
-                print content[start:end]
-        return False
-    return True
+                msg = content[start:end]
+        return (False, msg)
+    return (True, u'成功访问了主页')
 
 
 def do():
@@ -83,15 +84,32 @@ def do():
         now = datetime.now()
         filename = 'do ' + now.strftime('%Y-%m-%d %H_%M_%S') + '.html'
         save_content_to_file(content, filename)
-        return False
+        return (False, u'抢流量时发生了错误，可能原因为相关参数已失效')
 
     # 抢流量失败时的提示
     pos = content.find('<div class="e_redBtn">')
     if -1 != pos:
+        msg = u'抢流量失败'
         start = pos + len('<div class="e_redBtn">')
         end = content.find('</div>', start)
         if -1 != end:
-            print content[start:end]
+            msg = content[start:end]
+        return (False, msg)
+
+    msg = u'没有获取到失败提示，成没成功不知道'
+
+    # 成功抢到了流量
+    pos = content.find('<p class="f_grey tAlign_c">')
+    if -1 != pos:
+        msg = u'成功抢到了流量'
+        start = pos + len('<p class="f_grey tAlign_c">')
+        end = content.find('<font class="f_red">', start)
+        if -1 != end:
+            msg = content[start:end]
+            start = end + len('<font class="f_red">')
+            end = content.find('</font>', start)
+            if -1 != end:
+                msg += content[start:end]
 
     # 当前流量余额
     pos = content.find('<span class="f_green">')
@@ -99,23 +117,29 @@ def do():
         start = pos + len('<span class="f_green">')
         end = content.find('</span>', start)
         if -1 != end:
-            print u'当前流量余额：' + content[start:end]
-    return True
+            msg += '\n' + u'当前流量余额：' + content[start:end]
+    return (True, msg)
 
 
 def netBank():
     ''' 上面几个函数的组合调用 '''
-    if not index():
-        print u'访问主页时发生了错误，可能相关参数已失效'
+    # 访问流量银行主页
+    succsss, msg = index()
+    if not succsss:
+        print msg
         return
-    if not gainNet():
+
+    # 访问抢流量页面
+    succsss, msg = gainNet()
+    if not succsss:
+        print msg
         return
+
+    # 随机延迟几秒后抢流量
     random_secs = random.randint(1, 3)
     time.sleep(random_secs)
-    if not do():
-        print u'访问主页时发生了错误，可能相关参数已失效'
-    else:
-        print u'本次操作完成'
+    succsss, msg = do()
+    print msg
 
 if __name__ == '__main__':
     netBank()
