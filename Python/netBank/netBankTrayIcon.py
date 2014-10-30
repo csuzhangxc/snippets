@@ -9,6 +9,7 @@
 import time
 import random
 from datetime import datetime
+import logging
 from PyQt4 import QtCore, QtGui
 import netBank
 
@@ -53,7 +54,7 @@ class NetBankThread(QtCore.QThread):
         now = datetime.now()
         if (now.minute < 59 and now.minute > 5) or success:
             # 未到抢流量时间 或 过了抢流量时间 或 本次抢成功了
-            min_sleep = 60 * (60-now.minute) + (60-now.second)
+            min_sleep = 60 * (59-now.minute) + (60-now.second)
             random_secs = random.randint(min_sleep, min_sleep+30)
         else:
             # 大约在抢流量的时间范围内
@@ -73,6 +74,8 @@ class NetBankWindow(QtGui.QMainWindow):
         self.trayIcon.show()
         self.trayIcon.setToolTip(u'流量银行-自动获取流量')
         self.setMenu()  # 显示上下文菜单
+        FORMAT = '%(asctime)s    %(message)s'
+        logging.basicConfig(filename='log.txt', level = logging.DEBUG, format=FORMAT)
         # 创建用于获取流量的线程 前连接信号槽
         self.thread = NetBankThread()
         self.thread.optResultSignal.connect(self.showMessage)
@@ -88,6 +91,7 @@ class NetBankWindow(QtGui.QMainWindow):
     def showMessage(self, title, msg, msecs=5000, icon=QtGui.QSystemTrayIcon.Information):
         ''' msecs 似乎有问题 '''
         icon = QtGui.QSystemTrayIcon.Information
+        logging.info(msg.replace('\n', '  '))
         self.trayIcon.showMessage(title, msg, icon, msecs)
 
 
